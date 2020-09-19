@@ -1,4 +1,7 @@
+import os
 import sys
+import time
+import datetime
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import normalize
@@ -18,6 +21,9 @@ from extraction import getLBP, getTopHat
 #     ]
 
 def runSVM(dataset):
+	start_time = time.time()
+	preds = []
+	values = []
 	#prepare model
 	model = svm.SVC(kernel='rbf', random_state=0, gamma=1,C=1, decision_function_shape='ovo')
 
@@ -27,6 +33,9 @@ def runSVM(dataset):
 		#leave one out
 		train = dataset[:index] + dataset[index+1:]
 		test = [dataset[index]]
+		#k-fode simples
+		# train = dataset[20:]
+		# test = dataset[:20]
 
 		#prepare data for training
 		trainX = []
@@ -36,7 +45,13 @@ def runSVM(dataset):
 				trainX.append(data)
 				trainY.append(target)
 
-		print(f"{len(trainX)} features to fit from {len(train)} patients")
+		trainX = np.array(trainX,dtype='object')
+		trainX = normalize(trainX)
+
+		trainY = np.array(trainY,dtype='float')
+
+		print(f"{trainX.shape} features to fit from {len(train)} patients, without patient {index}")
+
 		#fit model
 		model.fit(trainX, trainY)
 
@@ -48,16 +63,37 @@ def runSVM(dataset):
 				testX.append(data)
 				testY.append(target)
 
-		print(f"{len(testX)} features to test from {len(test)} patients")
+		testX = np.array(testX, dtype='object')
+		testX = normalize(testX)
+
+		testY = np.array(testY, dtype='float')
+
+		print(f"{testX.shape} features to test for patient {index}")
 
 		#get predictions for each instance in validation data
 		pred = model.predict(testX)
-		print(metrics.classification_report(testY, pred, zero_division=0))
-		break
+
+		preds.append(pred)
+		values.append(testY)
+		print(f"accuracy: {metrics.accuracy_score(testY, pred)}")
+		print(f" Time elapsed: {datetime.timedelta(seconds=round(time.time()-start_time))} seconds")
+
+	return preds,values
 
 def main():
-	runSVM(getTopHat())
-	runSVM(getLBP())
+	if(not os.path.isdir('./predictions')):
+		os.mkdir('./predictions')
+
+	preds,values = runSVM(getTopHat())
+
+	with open('./predictions/svm_tophat.npz', 'wb') as out:
+		np.savez(out, preds=preds,values=values)
+		print(f"./predictions/svm_tophat.npz saved")
+
+	# preds, values = runSVM(getLBP())
+	# with open('./predictions/svm_LBP.npz', 'wb') as out:
+	# 	np.savez(out, preds=preds, values=values)
+	# 	print(f"./predictions/svm_LBP.npz saved")
 
 
 if __name__ == "__main__":

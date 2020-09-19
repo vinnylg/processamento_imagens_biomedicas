@@ -144,7 +144,7 @@ def getNormalizedImages(lung_blocks_df=None, force=False):
     else:
         print('Need lung_blocks_df to normalize')
         lung_blocks_df = getLungBlocks()
-        return getNormalizedImages(lung_blocks_df)
+        return getNormalizedImages(lung_blocks_df,force=force)
 
     return normalized_df
 
@@ -156,7 +156,7 @@ def getLBP(normalized_imgs_df=None, R=1, method='default', force=False):
     elif not isinstance(normalized_imgs_df,pd.DataFrame):
         print('Need normalized_imgs_df to extract')
         normalized_imgs_df = getNormalizedImages()
-        return getLBP(normalized_imgs_df)
+        return getLBP(normalized_imgs_df,force=force)
     else:
         print('extracting lbp')
         start_time = time.time()
@@ -203,7 +203,7 @@ def getTopHat(normalized_imgs_df=None, filterSize=(3, 3), method='default', forc
     elif not isinstance(normalized_imgs_df, pd.DataFrame):
         print('Need normalized_imgs_df to extract')
         normalized_imgs_df = getNormalizedImages()
-        return getTopHat(normalized_imgs_df)
+        return getTopHat(normalized_imgs_df, force=force)
     else:
         print('extracting tophat')
         start_time = time.time()
@@ -252,10 +252,10 @@ def getTopHat(normalized_imgs_df=None, filterSize=(3, 3), method='default', forc
 
 
 def main():
-    lb_df = getLungBlocks(force=False)
-    nimg_df = getNormalizedImages(lb_df, force=False)
-    getLBP(nimg_df, force=True)
-    getTopHat(nimg_df, force=True)
+    # lb_df = getLungBlocks(force=False)
+    # nimg_df = getNormalizedImages(lb_df, force=False)
+    getLBP(nimg_df, force=False)
+    getTopHat(nimg_df, force=False)
 
 
 if __name__ == "__main__":
