@@ -8,7 +8,7 @@ from sklearn.preprocessing import normalize
 from sklearn import metrics
 from sklearn import svm
 import statistics
-
+from sklearn.metrics import confusion_matrix
 from extraction import getLBP, getTopHat
 
 # dataset = [
@@ -19,76 +19,150 @@ from extraction import getLBP, getTopHat
 #     }
 #     ... array of patients
 #     ]
+# def runSVM(dataset):
+# 	start_time = time.time()
+# 	preds = []
+# 	values = []
+# 	#prepare model
+# 	model = svm.SVC(kernel='rbf', random_state=0, gamma=1,C=1, decision_function_shape='ovo')
+#
+# 	#for each patient
+# 	for index in range(len(dataset)):
+# 		#split dataset into validation set and training set
+# 		#leave one out
+# 		train = dataset[:index] + dataset[index+1:]
+# 		test = [dataset[index]]
+# 		#k-fold simples
+# 		# train = dataset[20:]
+# 		# test = dataset[:20]
+#
+# 		#prepare data for training
+# 		trainX = []
+# 		trainY = []
+# 		for patient in train:
+# 			for data, target in zip(patient['data'], patient['target']):
+# 				trainX.append(data)
+# 				trainY.append(target)
+#
+# 		trainX = np.array(trainX,dtype='object')
+# 		trainX = normalize(trainX)
+#
+# 		trainY = np.array(trainY,dtype='float')
+#
+# 		print(f"{trainX.shape} features to fit from {len(train)} patients, without patient {index}")
+#
+# 		#fit model
+# 		model.fit(trainX, trainY)
+#
+# 		#prepare validation data
+# 		testX = []
+# 		testY = []
+# 		for patient in test:
+# 			for data, target in zip(patient['data'], patient['target']):
+# 				testX.append(data)
+# 				testY.append(target)
+#
+# 		testX = np.array(testX, dtype='object')
+# 		testX = normalize(testX)
+#
+# 		testY = np.array(testY, dtype='float')
+#
+# 		print(f"{testX.shape} features to test for patient {index}")
+#
+# 		#get predictions for each instance in validation data
+# 		pred = model.predict(testX)
+#
+# 		preds.append(pred)
+# 		values.append(testY)
+# 		print(f"accuracy: {metrics.accuracy_score(testY, pred)}")
+# 		print(f" Time elapsed: {datetime.timedelta(seconds=round(time.time()-start_time))} seconds")
+#
+# 	return preds,values
+def print_confusion_matrix (cm):
+    for row in cm:
+        print('\t',row)
 
-def runSVM(dataset):
-	start_time = time.time()
-	preds = []
-	values = []
+def main():
+    if(not os.path.isdir('./predictions')):
+        os.mkdir('./predictions')
+
+    scores = []
 	#prepare model
-	model = svm.SVC(kernel='rbf', random_state=0, gamma=1,C=1, decision_function_shape='ovo')
+    model = svm.SVC(kernel='rbf', random_state=0, gamma='scale',C=1, decision_function_shape='ovo')
 
+    dataset = getTopHat()
+
+    cm = [[0 for i in range(6)] for j in range(6)]
+    #print_confusion_matrix(cm)
 	#for each patient
-	for index in range(len(dataset)):
+    for index in range(len(dataset)):
+        start_time = time.time()
+        preds = []
+        values = []
+
 		#split dataset into validation set and training set
 		#leave one out
-		train = dataset[:index] + dataset[index+1:]
-		test = [dataset[index]]
-		#k-fode simples
+        train = dataset[:index] + dataset[index+1:]
+        test = [dataset[index]]
+		#k-fold simples
 		# train = dataset[20:]
 		# test = dataset[:20]
 
 		#prepare data for training
-		trainX = []
-		trainY = []
-		for patient in train:
-			for data, target in zip(patient['data'], patient['target']):
-				trainX.append(data)
-				trainY.append(target)
+        trainX = []
+        trainY = []
+        for patient in train:
+            for data, target in zip(patient['data'], patient['target']):
+                trainX.append(data)
+                trainY.append(target)
 
-		trainX = np.array(trainX,dtype='object')
-		trainX = normalize(trainX)
+        trainX = np.array(trainX,dtype='object')
+        trainX = normalize(trainX)
 
-		trainY = np.array(trainY,dtype='float')
+        trainY = np.array(trainY,dtype='float')
 
-		print(f"{trainX.shape} features to fit from {len(train)} patients, without patient {index}")
+        print(f"{trainX.shape} features to fit from {len(train)} patients, without patient {index}")
 
 		#fit model
-		model.fit(trainX, trainY)
+        model.fit(trainX, trainY)
 
 		#prepare validation data
-		testX = []
-		testY = []
-		for patient in test:
-			for data, target in zip(patient['data'], patient['target']):
-				testX.append(data)
-				testY.append(target)
+        testX = []
+        testY = []
+        for patient in test:
+            for data, target in zip(patient['data'], patient['target']):
+                testX.append(data)
+                testY.append(target)
 
-		testX = np.array(testX, dtype='object')
-		testX = normalize(testX)
+        testX = np.array(testX, dtype='object')
+        testX = normalize(testX)
 
-		testY = np.array(testY, dtype='float')
+        testY = np.array(testY, dtype='float')
 
-		print(f"{testX.shape} features to test for patient {index}")
+        print(f"{testX.shape} features to test for patient {index}")
 
 		#get predictions for each instance in validation data
-		pred = model.predict(testX)
+        pred = model.predict(testX)
+        for label, predicted in zip(testY, pred):
+            #print('label:', label)
+            #print('predicted:', predicted)
+            cm[int(predicted)][int(label)] += 1
 
-		preds.append(pred)
-		values.append(testY)
-		print(f"accuracy: {metrics.accuracy_score(testY, pred)}")
-		print(f" Time elapsed: {datetime.timedelta(seconds=round(time.time()-start_time))} seconds")
+        #print('cm')
+        #print_confusion_matrix(cm)
 
-	return preds,values
+        #preds.append(pred)
+        #values.append(testY)
+        scores.append(metrics.accuracy_score(testY, pred))
+        print(f"accuracy: {metrics.accuracy_score(testY, pred)}")
+        print(f" Time elapsed: {datetime.timedelta(seconds=round(time.time()-start_time))} seconds")
 
-def main():
-	if(not os.path.isdir('./predictions')):
-		os.mkdir('./predictions')
+    print(np.mean(scores))
+    print_confusion_matrix(cm)
 
-	preds,values = runSVM(getTopHat())
-
-	with open('./predictions/svm_tophat.npz', 'wb') as out:
-		np.savez(out, preds=preds,values=values)
-		print(f"./predictions/svm_tophat.npz saved")
+    #with open('./predictions/svm_tophat.npz', 'wb') as out:
+    #    np.savez(out, preds=preds,values=values)
+    #    print(f"./predictions/svm_tophat.npz saved")
 
 	# preds, values = runSVM(getLBP())
 	# with open('./predictions/svm_LBP.npz', 'wb') as out:

@@ -12,7 +12,7 @@ from skimage import feature
 from matplotlib import pyplot as plt
 from matplotlib import image as mpimg
 
-ROOT_PATH = './database'
+ROOT_PATH = '..'
 LB_PATH = ROOT_PATH + '/lung_blocks'
 NM_PATH = ROOT_PATH + '/normalized'
 EXT_PATH = './extraction'
@@ -252,9 +252,9 @@ def getTopHat(normalized_imgs_df=None, filterSize=(3, 3), method='default', forc
 
 
 def main():
-    # lb_df = getLungBlocks(force=False)
-    # nimg_df = getNormalizedImages(lb_df, force=False)
-    getLBP(nimg_df, force=False)
+    lb_df = getLungBlocks(force=True)
+    nimg_df = getNormalizedImages(lb_df, force=True)
+    #getLBP(nimg_df, force=False)
     getTopHat(nimg_df, force=False)
 
 
