@@ -21,7 +21,7 @@ def classify(dataset):
 
     scores = []
 	#prepare model
-    model = svm.SVC(kernel='rbf', random_state=0, gamma='scale',C=1, decision_function_shape='ovo')
+    model = svm.SVC(kernel='rbf', random_state=0, gamma='scale',C=1, decision_function_shape='ovo', probability=True)
 
     cm = [[0 for i in range(6)] for j in range(6)]
     #print_confusion_matrix(cm)
@@ -48,12 +48,10 @@ def classify(dataset):
                 trainY.append(target)
 
         trainX = np.array(trainX,dtype='object')
-        #print(trainX)
-        #print(len(trainX))
         if trainX.ndim == 1:
             trainX = trainX.reshape(-1,1)
-        trainX = normalize(trainX)
-        #print(trainX)
+        else:
+            trainX = normalize(trainX)
         trainY = np.array(trainY,dtype='float')
 
         print(f"{trainX.shape} features to fit from {len(train)} patients, without patient {index}")
@@ -72,7 +70,8 @@ def classify(dataset):
         testX = np.array(testX, dtype='object')
         if testX.ndim == 1:
             testX = testX.reshape(-1,1)
-        testX = normalize(testX)
+        else:
+            testX = normalize(testX)
 
         testY = np.array(testY, dtype='float')
 
@@ -80,6 +79,8 @@ def classify(dataset):
 
 		#get predictions for each instance in validation data
         pred = model.predict(testX)
+        prob = model.predict_proba(testX)
+        #print('prob:', prob)
         for label, predicted in zip(testY, pred):
             #print('label:', label)
             #print('predicted:', predicted)
@@ -88,7 +89,7 @@ def classify(dataset):
         #print('cm')
         #print_confusion_matrix(cm)
 
-        preds.append(pred)
+        preds.append(prob)
         values.append(testY)
         scores.append(metrics.accuracy_score(testY, pred))
         print(f"accuracy: {metrics.accuracy_score(testY, pred)}")
@@ -100,15 +101,15 @@ def classify(dataset):
     return preds, values, cm, np.mean(scores)
 
 def main():
-    # preds, values, cm, acc = classify(getTopHat())
-    # with open('./predictions/svm_tophat.npz', 'wb') as out:
-    #    np.savez(out, preds=preds,values=values, cm=cm, acc=acc)
-    #    print(f"./predictions/svm_tophat.npz saved")
+    preds, values, cm, acc = classify(getTopHat())
+    with open('./predictions/svm_tophat.npz', 'wb') as out:
+       np.savez(out, preds=preds,values=values, cm=cm, acc=acc)
+       print(f"./predictions/svm_tophat.npz saved")
 
-    preds, values, cm, acc = classify(getFractalDim())
-    with open('./predictions/svm_fractaldim.npz', 'wb') as out:
-        np.savez(out, preds=preds,values=values, cm=cm, acc=acc)
-        print(f"./predictions/svm_fractaldim.npz saved")
+    # preds, values, cm, acc = classify(getFractalDim())
+    # with open('./predictions/svm_fractaldim.npz', 'wb') as out:
+    #     np.savez(out, preds=preds,values=values, cm=cm, acc=acc)
+    #     print(f"./predictions/svm_fractaldim.npz saved")
 
 	# preds, values = runSVM(getLBP())
 	# with open('./predictions/svm_LBP.npz', 'wb') as out:
