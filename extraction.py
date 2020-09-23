@@ -250,12 +250,78 @@ def getTopHat(normalized_imgs_df=None, filterSize=(3, 3), method='default', forc
     #to list because we wanna use splits (like [:index] + [index+1:]) and numpy is dumb
     return dataset.tolist()
 
+def boxcount (Z, k):
+    S = np.add.reduceat(
+            np.add.reduceat(Z, np.arange(0, Z.shape[0], k), axis=0),
+                               np.arange(0, Z.shape[1], k), axis=1)
+
+    # We count non-empty (0) and non-full boxes (k*k)
+    return len(np.where((S > 0) & (S < k*k))[0])
+
+def getFractalDim(normalized_imgs_df=None, force=False):
+    if os.path.isfile(EXT_PATH + '/fractaldim.npz') and not force:
+        print(f"{EXT_PATH}/fractaldim.npz loaded")
+        dataset = np.load(EXT_PATH + '/fractaldim.npz',
+                          allow_pickle=True)['dataset']
+    elif not isinstance(normalized_imgs_df, pd.DataFrame):
+        print('Need normalized_imgs_df to extract')
+        normalized_imgs_df = getNormalizedImages()
+        return getTopHat(normalized_imgs_df, force=force)
+    else:
+        print('calculating fractal dimension')
+        start_time = time.time()
+
+        patients = normalized_imgs_df['patient_id'].unique()
+        dataset = np.ndarray(len(patients), dtype='object')
+
+        for patient, index in zip(patients, range(len(patients))):
+            patient_df = normalized_imgs_df.loc[normalized_imgs_df['patient_id'] == patient]
+            paths = patient_df['path'].to_numpy()
+            data = []
+            for i in range(len(paths)):
+                image = cv2.imread(ROOT_PATH + paths[i], cv2.IMREAD_GRAYSCALE)
+
+                thresh = image.mean(axis=0).mean()
+                print('threshold value =', thresh)
+
+                #transform image into binary array
+                Z = image < thresh
+
+                #exponent = log_2(32)
+                n = 5
+
+                #build box sizes
+                sizes = 2**np.arange(n, 1, -1)
+
+                #box counting
+                counts = []
+                for size in sizes:
+                    counts.append(boxcount(Z, size))
+
+                # Fit the successive log(sizes) with log (counts)
+                coeffs = np.polyfit(np.log(sizes), np.log(counts), 1)
+                print('fractal dim = ', -coeffs[0])
+                data.append(-coeffs[0])
+            target = patient_df['label'].values.tolist()
+            dataset[index] = {'patient_id': patient,
+                              'data': data, 'target': target}
+        print(f"{len(normalized_imgs_df)} fractal dimension calculated - Time elapsed: {datetime.timedelta(seconds=round(time.time()-start_time))} seconds")
+
+        if(not os.path.isdir(EXT_PATH)):
+            os.mkdir(EXT_PATH)
+
+        with open(EXT_PATH + '/fractaldim.npz', 'wb') as out:
+            np.savez(out, dataset=dataset)
+            print(f"{EXT_PATH}/fractaldim.npz saved")
+
+    return dataset.tolist()
 
 def main():
-    lb_df = getLungBlocks(force=True)
-    nimg_df = getNormalizedImages(lb_df, force=True)
+    lb_df = getLungBlocks(force=False)
+    nimg_df = getNormalizedImages(lb_df, force=False)
     #getLBP(nimg_df, force=False)
-    getTopHat(nimg_df, force=False)
+    #getTopHat(nimg_df, force=False)
+    getFractalDim(nimg_df, force=False)
 
 
 if __name__ == "__main__":
