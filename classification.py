@@ -20,6 +20,8 @@ def classify(dataset):
         os.mkdir('./predictions')
 
     scores = []
+    preds = []
+    values = []
 	#prepare model
     model = svm.SVC(kernel='rbf', random_state=0, gamma='scale',C=1, decision_function_shape='ovo', probability=True)
 
@@ -28,8 +30,6 @@ def classify(dataset):
 	#for each patient
     for index in range(len(dataset)):
         start_time = time.time()
-        preds = []
-        values = []
 
 		#split dataset into validation set and training set
 		#leave one out
@@ -101,20 +101,20 @@ def classify(dataset):
     return preds, values, cm, np.mean(scores)
 
 def main():
-    preds, values, cm, acc = classify(getTopHat())
-    with open('./predictions/svm_tophat.npz', 'wb') as out:
-       np.savez(out, preds=preds,values=values, cm=cm, acc=acc)
-       print(f"./predictions/svm_tophat.npz saved")
+    # preds, values, cm, acc = classify(getTopHat())
+    # with open('./predictions/svm_tophat.npz', 'wb') as out:
+    #    np.savez(out, preds=preds,values=values, cm=cm, acc=acc)
+    #    print(f"./predictions/svm_tophat.npz saved")
 
     # preds, values, cm, acc = classify(getFractalDim())
     # with open('./predictions/svm_fractaldim.npz', 'wb') as out:
     #     np.savez(out, preds=preds,values=values, cm=cm, acc=acc)
     #     print(f"./predictions/svm_fractaldim.npz saved")
 
-	# preds, values = runSVM(getLBP())
-	# with open('./predictions/svm_LBP.npz', 'wb') as out:
-	# 	np.savez(out, preds=preds,values=values, cm=cm, acc=acc)
-	# 	print(f"./predictions/svm_LBP.npz saved")
+	preds, values, cm, acc = classify(getLBP())
+	with open('./predictions/svm_LBP.npz', 'wb') as out:
+		np.savez(out, preds=preds,values=values, cm=cm, acc=acc)
+		print(f"./predictions/svm_LBP.npz saved")
 
 if __name__ == "__main__":
 	main()

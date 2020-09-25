@@ -12,7 +12,7 @@ from skimage import feature
 from matplotlib import pyplot as plt
 from matplotlib import image as mpimg
 
-ROOT_PATH = '..'
+ROOT_PATH = 'database'
 LB_PATH = ROOT_PATH + '/lung_blocks'
 NM_PATH = ROOT_PATH + '/normalized'
 EXT_PATH = './extraction'
@@ -84,7 +84,7 @@ def scanDatabase(rootpath):
 def getLungBlocks(force=False):
     if not os.path.isdir(LB_PATH):
         print(f"{LB_PATH} not found")
-        sys.exit()
+        sys.exit(-1)
     elif os.path.isfile(f"{LB_PATH}.csv") and not force:
         lung_blocks_df = pd.read_csv(f"{LB_PATH}.csv")
         print(f"{LB_PATH}.csv loaded")
@@ -173,10 +173,11 @@ def getLBP(normalized_imgs_df=None, R=1, method='default', force=False):
             for i in range(len(paths)):
                 image = cv2.imread( ROOT_PATH + paths[i], cv2.IMREAD_GRAYSCALE)
                 lbp_img = feature.local_binary_pattern(image,P,R,method).astype(int).ravel()
-                lbp_hist = np.zeros(256,dtype=np.uint16)
-                for pixel in lbp_img:
-                    lbp_hist[pixel]+=1
-                data.append(lbp_hist)
+                mean, std = cv2.meanStdDev(lbp_img)
+                # lbp_hist = np.zeros(256,dtype=np.uint16)
+                # for pixel in lbp_img:
+                #     lbp_hist[pixel]+=1
+                data.append([mean.item(), std.item()])
 
             target = patient_df['label'].values.tolist()
             dataset[index] = {'patient_id': patient,
@@ -317,11 +318,11 @@ def getFractalDim(normalized_imgs_df=None, force=False):
     return dataset.tolist()
 
 def main():
-    lb_df = getLungBlocks(force=False)
-    nimg_df = getNormalizedImages(lb_df, force=False)
-    #getLBP(nimg_df, force=False)
-    #getTopHat(nimg_df, force=False)
-    getFractalDim(nimg_df, force=False)
+    # lb_df = getLungBlocks(force=True)
+    # nimg_df = getNormalizedImages(lb_df, force=True)
+    getLBP(force=True)
+    # getTopHat(nimg_df, force=True)
+    # getFractalDim(nimg_df, force=True)
 
 
 if __name__ == "__main__":
