@@ -181,7 +181,7 @@ def simpleCLBP(image):
             mean_M = np.mean(CLBP_M)
             for neighbour in neighbours:
                 ldiff = neighbour - image[i,j] # dp = gp - gc
-                
+
                 #calculate CLBP_S -> Signal of diference, same that LBP
                 if ldiff >= 0:
                     binary_S += '1'
@@ -212,6 +212,51 @@ def simpleCLBP(image):
     CLBP_S_M_C = CLBP_S_hist + CLBP_M_hist + CLBP_C_hist
     return CLBP_S_M_C
 
+def getCLBP(normalized_imgs_df=None, R=1, method='default', force=False):
+    if os.path.isfile(EXT_PATH + '/clbp.npz') and not force:
+        print(f"{EXT_PATH}/clbp.npz loaded")
+        dataset = np.load(EXT_PATH + '/lbp.npz',allow_pickle=True)['dataset']
+    elif not isinstance(normalized_imgs_df,pd.DataFrame):
+        print('Need normalized_imgs_df to extract')
+        normalized_imgs_df = getNormalizedImages()
+        return getCLBP(normalized_imgs_df,force=force)
+    else:
+        print('extracting clbp')
+        start_time = time.time()
+
+        P = R*8 ## number of neighbours
+
+        patients = normalized_imgs_df['patient_id'].unique()
+        dataset = np.ndarray(len(patients),dtype='object')
+
+        for patient,index in zip(patients,range(len(patients))):
+            patient_df = normalized_imgs_df.loc[normalized_imgs_df['patient_id'] == patient]
+            paths = patient_df['path'].to_numpy()
+            data = []
+            for i in range(len(paths)):
+                image = cv2.imread( ROOT_PATH + paths[i], cv2.IMREAD_GRAYSCALE)
+                histCLBP = simpleCLBP(image) #return joined histogram for CLBP_S CLBP_M CLBP_C
+                data.append(histCLBP.tolist())
+
+            # print(f"CLBP extracted from {i} images of patient {index} - Time elapsed: {datetime.timedelta(seconds=round(time.time()-start_time))} seconds")
+
+            target = patient_df['label'].values.tolist()
+            dataset[index] = {'patient_id': patient,
+                              'data': data, 'target': target}
+
+        print(f"{len(normalized_imgs_df)} lbp extracted - Time elapsed: {datetime.timedelta(seconds=round(time.time()-start_time))} seconds")
+
+        if( not os.path.isdir(EXT_PATH) ):
+            os.mkdir(EXT_PATH)
+
+        with open( EXT_PATH + '/clbp.npz', 'wb') as out:
+            np.savez(out,dataset=dataset)
+            print(f"{EXT_PATH}/clbp.npz saved")
+
+    #to list because we wanna use splits (like [:index] + [index+1:]) and numpy is dumb
+    return dataset.tolist()
+
+
 def getLBP(normalized_imgs_df=None, R=1, method='default', force=False):
     if os.path.isfile(EXT_PATH + '/lbp.npz') and not force:
         print(f"{EXT_PATH}/lbp.npz loaded")
@@ -235,16 +280,11 @@ def getLBP(normalized_imgs_df=None, R=1, method='default', force=False):
             data = []
             for i in range(len(paths)):
                 image = cv2.imread( ROOT_PATH + paths[i], cv2.IMREAD_GRAYSCALE)
-                histCLBP = simpleCLBP(image) #return joined histogram for CLBP_S CLBP_M CLBP_C
-                # lbp_img = feature.local_binary_pattern(image,P,R,method).astype(int).ravel()
-                # lbp_hist = np.zeros(256,dtype=np.uint16)
-                # for pixel in lbp_img:
-                #     lbp_hist[pixel]+=1
+                lbp_img = feature.local_binary_pattern(image,P,R,method).astype(int).ravel()
+                hist_lbp, _ = np.histogram(lbp_img,32,[0,256])
+                data.append(hist_lbp.tolist())
 
-                # mean, std = cv2.meanStdDev(lbp_img)
-                data.append(histCLBP)
-                
-            print(f"CLBP extracted from images of patient {index} - Time elapsed: {datetime.timedelta(seconds=round(time.time()-start_time))} seconds")
+            # print(f"LBP extracted from {i} images of patient {index} - Time elapsed: {datetime.timedelta(seconds=round(time.time()-start_time))} seconds")
 
             target = patient_df['label'].values.tolist()
             dataset[index] = {'patient_id': patient,
@@ -350,7 +390,7 @@ def getFractalDim(normalized_imgs_df=None, force=False):
                 image = cv2.imread(ROOT_PATH + paths[i], cv2.IMREAD_GRAYSCALE)
 
                 thresh = image.mean(axis=0).mean()
-                print('threshold value =', thresh)
+                # print('threshold value =', thresh)
 
                 #transform image into binary array
                 Z = image < thresh
@@ -368,7 +408,7 @@ def getFractalDim(normalized_imgs_df=None, force=False):
 
                 # Fit the successive log(sizes) with log (counts)
                 coeffs = np.polyfit(np.log(sizes), np.log(counts), 1)
-                print('fractal dim = ', -coeffs[0])
+                # print('fractal dim = ', -coeffs[0])
                 data.append(-coeffs[0])
             target = patient_df['label'].values.tolist()
             dataset[index] = {'patient_id': patient,
@@ -385,11 +425,12 @@ def getFractalDim(normalized_imgs_df=None, force=False):
     return dataset.tolist()
 
 def main():
-    # lb_df = getLungBlocks(force=True)
-    # nimg_df = getNormalizedImages(lb_df, force=True)
-    getLBP(force=True)
-    # getTopHat(nimg_df, force=True)
-    # getFractalDim(nimg_df, force=True)
+    lb_df = getLungBlocks(force=False)
+    nimg_df = getNormalizedImages(lb_df, force=False)
+    getLBP(nimg_df, force=True)
+    getCLBP(nimg_df, force=True)
+    getTopHat(nimg_df, force=False)
+    getFractalDim(nimg_df, force=False)
 
 
 if __name__ == "__main__":
