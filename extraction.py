@@ -427,8 +427,8 @@ def getFractalDim(normalized_imgs_df=None, force=False):
 def main():
     lb_df = getLungBlocks(force=False)
     nimg_df = getNormalizedImages(lb_df, force=False)
-    getLBP(nimg_df, force=True)
-    getCLBP(nimg_df, force=True)
+    getLBP(nimg_df, force=False)
+    getCLBP(nimg_df, force=False)
     getTopHat(nimg_df, force=False)
     getFractalDim(nimg_df, force=False)
 
