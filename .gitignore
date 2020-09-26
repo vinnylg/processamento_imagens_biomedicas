@@ -2,5 +2,6 @@
 __pycache__/
 *.pdf
 *desktop.ini
-database/*
+lung_blocks/
+normalized/
 extraction/

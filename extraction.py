@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+from sys import exit
 import cv2
 import time
 import datetime
@@ -12,10 +13,10 @@ from skimage import feature
 from matplotlib import pyplot as plt
 from matplotlib import image as mpimg
 
-ROOT_PATH = 'database'
-LB_PATH = ROOT_PATH + '/lung_blocks'
-NM_PATH = ROOT_PATH + '/normalized'
-EXT_PATH = './extraction'
+ROOT_PATH = './'
+LB_PATH = ROOT_PATH + 'lung_blocks'
+NM_PATH = ROOT_PATH + 'normalized'
+EXT_PATH = ROOT_PATH+  'extraction'
 
 def scanDatabase(rootpath):
     print(f"scanDatabase({rootpath})")
@@ -148,6 +149,68 @@ def getNormalizedImages(lung_blocks_df=None, force=False):
 
     return normalized_df
 
+def neighbourhood(image,i,j):
+    neighbours = []
+    neighbours.append(image[i,j+1]) #0º
+    neighbours.append(image[i-1,j+1]) #45º
+    neighbours.append(image[i-1,j]) #90º
+    neighbours.append(image[i-1,j-1]) #135º
+    neighbours.append(image[i,j-1]) #180º
+    neighbours.append(image[i+1,j-1]) #225º
+    neighbours.append(image[i+1,j]) #270º
+    neighbours.append(image[i+1,j+1]) #315º
+
+    return np.array(neighbours,dtype='int16')
+
+
+def simpleCLBP(image):
+    n_points = 8 # neighbourhood for radius 1
+    M,N = image.shape
+    
+    CLBP_S = np.zeros((M,N),dtype='int16')
+    CLBP_M = np.zeros((M,N),dtype='int16')
+    CLBP_C = np.zeros((M,N),dtype='int16')
+    
+    image = np.pad(image,pad_width=1, mode='mean')
+    mean_image = np.mean(image)
+    for i in range(1,M):
+        for j in range(1,N):
+            neighbours = neighbourhood(image,i,j)
+            binary_S = ''
+            binary_M = ''
+            mean_M = np.mean(CLBP_M)
+            for neighbour in neighbours:
+                ldiff = neighbour - image[i,j] # dp = gp - gc
+                
+                #calculate CLBP_S -> Signal of diference, same that LBP
+                if ldiff >= 0:
+                    binary_S += '1'
+                else:
+                    binary_S += '0'
+
+                #calculate CLBP_M -> = Magnitute of diference
+                if abs(ldiff) >= mean_M:
+                    binary_M += '1'
+                else:
+                    binary_M += '0'
+
+            #calculate CLBP_C
+            if image[i,j] >= mean_image:
+                CLBP_C[i,j] = image[i,j]
+            else:
+                CLBP_C[i,j] = 0
+
+            CLBP_S[i,j] = int(binary_S,2)
+            CLBP_M[i,j] = int(binary_M,2)
+
+    #generate histogram from each operator
+    CLBP_S_hist, _ = np.histogram(CLBP_S.ravel(),32,[0,256])
+    CLBP_M_hist, _ = np.histogram(CLBP_M.ravel(),32,[0,256])
+    CLBP_C_hist, _ = np.histogram(CLBP_C.ravel(),32,[0,256])
+
+    #join histograms
+    CLBP_S_M_C = CLBP_S_hist + CLBP_M_hist + CLBP_C_hist
+    return CLBP_S_M_C
 
 def getLBP(normalized_imgs_df=None, R=1, method='default', force=False):
     if os.path.isfile(EXT_PATH + '/lbp.npz') and not force:
@@ -172,12 +235,16 @@ def getLBP(normalized_imgs_df=None, R=1, method='default', force=False):
             data = []
             for i in range(len(paths)):
                 image = cv2.imread( ROOT_PATH + paths[i], cv2.IMREAD_GRAYSCALE)
-                lbp_img = feature.local_binary_pattern(image,P,R,method).astype(int).ravel()
-                mean, std = cv2.meanStdDev(lbp_img)
+                histCLBP = simpleCLBP(image) #return joined histogram for CLBP_S CLBP_M CLBP_C
+                # lbp_img = feature.local_binary_pattern(image,P,R,method).astype(int).ravel()
                 # lbp_hist = np.zeros(256,dtype=np.uint16)
                 # for pixel in lbp_img:
                 #     lbp_hist[pixel]+=1
-                data.append([mean.item(), std.item()])
+
+                # mean, std = cv2.meanStdDev(lbp_img)
+                data.append(histCLBP)
+                
+            print(f"CLBP extracted from images of patient {index} - Time elapsed: {datetime.timedelta(seconds=round(time.time()-start_time))} seconds")
 
             target = patient_df['label'].values.tolist()
             dataset[index] = {'patient_id': patient,

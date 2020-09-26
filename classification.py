@@ -16,6 +16,7 @@ def print_confusion_matrix (cm):
         print('\t',row)
 
 def classify(dataset):
+    absolute_start_time = time.time()
     if(not os.path.isdir('./predictions')):
         os.mkdir('./predictions')
 
@@ -23,7 +24,7 @@ def classify(dataset):
     preds = []
     values = []
 	#prepare model
-    model = svm.SVC(kernel='rbf', random_state=0, gamma='scale',C=1, decision_function_shape='ovo', probability=True)
+    model = svm.SVC(kernel='rbf', random_state=0, gamma='scale',C=1, decision_function_shape='ovo', probability=False)
 
     cm = [[0 for i in range(6)] for j in range(6)]
     #print_confusion_matrix(cm)
@@ -79,7 +80,7 @@ def classify(dataset):
 
 		#get predictions for each instance in validation data
         pred = model.predict(testX)
-        prob = model.predict_proba(testX)
+        # prob = model.predict_proba(testX)
         #print('prob:', prob)
         for label, predicted in zip(testY, pred):
             #print('label:', label)
@@ -89,11 +90,13 @@ def classify(dataset):
         #print('cm')
         #print_confusion_matrix(cm)
 
-        preds.append(prob)
+        # preds.append(prob)
         values.append(testY)
         scores.append(metrics.accuracy_score(testY, pred))
         print(f"accuracy: {metrics.accuracy_score(testY, pred)}")
         print(f" Time elapsed: {datetime.timedelta(seconds=round(time.time()-start_time))} seconds")
+ 
+    print(f" Total time elapsed: {datetime.timedelta(seconds=round(time.time()-absolute_start_time))} seconds")
 
     #print(np.mean(scores))
     #print_confusion_matrix(cm)
@@ -112,9 +115,9 @@ def main():
     #     print(f"./predictions/svm_fractaldim.npz saved")
 
 	preds, values, cm, acc = classify(getLBP())
-	with open('./predictions/svm_LBP.npz', 'wb') as out:
+	with open('./predictions/svm_CLBP.npz', 'wb') as out:
 		np.savez(out, preds=preds,values=values, cm=cm, acc=acc)
-		print(f"./predictions/svm_LBP.npz saved")
+		print(f"./predictions/svm_CLBP.npz saved")
 
 if __name__ == "__main__":
 	main()
