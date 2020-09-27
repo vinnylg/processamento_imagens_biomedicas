@@ -1,33 +1,28 @@
 import os
-import sys
+from sys import exit
 import time
 import datetime
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import normalize
-from sklearn import metrics
-from sklearn import svm
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.preprocessing import normalize, label_binarize
+from sklearn.metrics import confusion_matrix, accuracy_score
+from sklearn.svm import LinearSVC, SVC
 import statistics
-from sklearn.metrics import confusion_matrix
 from extraction import getLBP, getCLBP, getTopHat, getFractalDim
-
-def print_confusion_matrix (cm):
-    for row in cm:
-        print('\t',row)
 
 def classify(dataset):
     absolute_start_time = time.time()
     if(not os.path.isdir('./predictions')):
         os.mkdir('./predictions')
-
-    scores = []
-    preds = []
+    
     values = []
+    preds = []
+    scores = []
 	#prepare model
-    model = svm.SVC(kernel='rbf', random_state=0, gamma='scale',C=1, decision_function_shape='ovo', probability=False)
+    # model = LinearSVC(random_state=0)
+    model = SVC(kernel='rbf', random_state=0, gamma='scale',C=1, decision_function_shape='ovo')
 
-    cm = [[0 for i in range(6)] for j in range(6)]
-    #print_confusion_matrix(cm)
 	#for each patient
     for index in range(len(dataset)):
         start_time = time.time()
@@ -36,7 +31,6 @@ def classify(dataset):
 		#leave one out
         train = dataset[:index] + dataset[index+1:]
         test = [dataset[index]]
-		#k-fold simples
 
 		#prepare data for training
         trainX = []
@@ -76,49 +70,41 @@ def classify(dataset):
 
         print(f"{testX.shape} features to test for patient {index}")
 
+
 		#get predictions for each instance in validation data
+        score = model.decision_function(testX)
         pred = model.predict(testX)
-        # prob = model.predict_proba(testX)
-        #print('prob:', prob)
-        for label, predicted in zip(testY, pred):
-            #print('label:', label)
-            #print('predicted:', predicted)
-            cm[int(predicted)][int(label)] += 1
-
-        #print('cm')
-        #print_confusion_matrix(cm)
-
-        preds.append(pred)
+        
         values.append(testY)
-        scores.append(metrics.accuracy_score(testY, pred))
-        print(f"accuracy: {metrics.accuracy_score(testY, pred)}")
+        preds.append(pred)
+        scores.append(score)
+        
+        print(f"accuracy: {accuracy_score(testY, pred)}")
         print(f" Time elapsed: {datetime.timedelta(seconds=round(time.time()-start_time))} seconds")
         print(f" Total time elapsed: {datetime.timedelta(seconds=round(time.time()-absolute_start_time))} seconds")
- 
-    #print(np.mean(scores))
-    #print_confusion_matrix(cm)
 
-    return preds, values, cm, np.mean(scores)
+
+    return np.array(values,dtype='object'), np.array(preds,dtype='object'), np.array(scores,dtype='object')
 
 def main():
-    preds, values, cm, acc = classify(getTopHat())
+    values, preds, scores = classify(getTopHat())
     with open('./predictions/svm_tophat.npz', 'wb') as out:
-        np.savez(out, preds=preds,values=values, cm=cm, acc=acc)
+        np.savez(out, values=values, preds=preds, scores=scores)
         print(f"./predictions/svm_tophat.npz saved")
 
-    preds, values, cm, acc = classify(getFractalDim())
+    values, preds, scores = classify(getFractalDim())
     with open('./predictions/svm_fractaldim.npz', 'wb') as out:
-        np.savez(out, preds=preds,values=values, cm=cm, acc=acc)
+        np.savez(out, values=values, preds=preds, scores=scores)
         print(f"./predictions/svm_fractaldim.npz saved")
 
-    preds, values, cm, acc = classify(getLBP())
+    values, preds, scores = classify(getLBP())
     with open('./predictions/svm_LBP.npz', 'wb') as out:
-        np.savez(out, preds=preds,values=values, cm=cm, acc=acc)
+        np.savez(out, values=values, preds=preds, scores=scores)
         print(f"./predictions/svm_LBP.npz saved")
 
-    preds, values, cm, acc = classify(getCLBP())
+    values, preds, scores = classify(getCLBP())
     with open('./predictions/svm_CLBP.npz', 'wb') as out:
-        np.savez(out, preds=preds,values=values, cm=cm, acc=acc)
+        np.savez(out, values=values, preds=preds, scores=scores)
         print(f"./predictions/svm_CLBP.npz saved")
 
 if __name__ == "__main__":

@@ -215,7 +215,7 @@ def simpleCLBP(image):
 def getCLBP(normalized_imgs_df=None, R=1, method='default', force=False):
     if os.path.isfile(EXT_PATH + '/clbp.npz') and not force:
         print(f"{EXT_PATH}/clbp.npz loaded")
-        dataset = np.load(EXT_PATH + '/lbp.npz',allow_pickle=True)['dataset']
+        dataset = np.load(EXT_PATH + '/clbp.npz',allow_pickle=True)['dataset']
     elif not isinstance(normalized_imgs_df,pd.DataFrame):
         print('Need normalized_imgs_df to extract')
         normalized_imgs_df = getNormalizedImages()
@@ -425,12 +425,13 @@ def getFractalDim(normalized_imgs_df=None, force=False):
     return dataset.tolist()
 
 def main():
-    lb_df = getLungBlocks(force=False)
-    nimg_df = getNormalizedImages(lb_df, force=False)
-    getLBP(nimg_df, force=False)
-    getCLBP(nimg_df, force=False)
-    getTopHat(nimg_df, force=False)
-    getFractalDim(nimg_df, force=False)
+    force=True
+    lb_df = getLungBlocks(force=force)
+    nimg_df = getNormalizedImages(lb_df, force=force)
+    getLBP(nimg_df, force=force)
+    getCLBP(nimg_df, force=force)
+    getTopHat(nimg_df, force=force)
+    getFractalDim(nimg_df, force=force)
 
 
 if __name__ == "__main__":
