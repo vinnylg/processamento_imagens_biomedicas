@@ -36,7 +36,7 @@ for prediction in predictions.keys():
     
     n_classes = len(scores[0][0])
     
-    cm = np.ndarray((n_classes,n_classes),dtype='uint16')
+    cm = np.zeros((n_classes,n_classes),dtype='uint16')
 
     for value,pred,score in zip(values,preds,scores):
         bvalue = np.ndarray((len(value),n_classes),dtype='int8')
@@ -95,7 +95,7 @@ for prediction in predictions.keys():
     df.to_csv(f"results/{prediction}.csv",index=labels,index_label='labels')
 
     df_cm = pd.DataFrame(cm, range(6), range(6))
-    plt.figure(figsize=(6,6))
+    plt.figure(figsize=(10,10))
     ax = plt.axes()
     sn.set(font_scale=1.4) # for label size
     sn.heatmap(df_cm, annot=True, fmt='g', ax=ax) # font size
@@ -103,8 +103,10 @@ for prediction in predictions.keys():
     plt.ylabel('True Label')
     plt.xlabel('Predicated Label')
     plt.savefig(f"results/{prediction}_cm.png")
+    plt.cla()
     plt.clf()
-
+    
+    del cm
 
     # Compute ROC curve and ROC area for each class
     fpr = dict()
@@ -132,7 +134,7 @@ for prediction in predictions.keys():
     tpr["macro"] = mean_tpr
     roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
     
-    plt.figure(figsize=(8,8))
+    plt.figure(figsize=(10,10))
     lw = 2
     plt.plot(fpr["micro"], tpr["micro"],
             label='micro-average ROC curve (area = {0:0.2f})'
@@ -156,8 +158,11 @@ for prediction in predictions.keys():
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
     plt.title(f'ROC multi-class {prediction}')
-    plt.legend(loc="lower right")
+    plt.legend(loc="best")
     plt.savefig(f"results/{prediction}_roc.png")
+    plt.cla()
     plt.clf()
+
+
 
 
