@@ -20,7 +20,7 @@ def classify(dataset):
     preds = []
     scores = []
 	#prepare model
-    model = LinearSVC(random_state=0)
+    model = LinearSVC(random_state=0, class_weight='balanced', max_iter=3000)
     # model = SVC(kernel='rbf', random_state=0, gamma='scale',C=1, decision_function_shape='ovo')
 
 	#for each patient
