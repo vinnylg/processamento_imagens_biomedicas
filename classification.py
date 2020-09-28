@@ -11,6 +11,18 @@ from sklearn.svm import LinearSVC, SVC
 import statistics
 from extraction import getLBP, getCLBP, getTopHat, getFractalDim
 
+def join_dataset(d1,d2,d3,d4):
+    newDataset = []
+    for index in range(len(d1)):
+        newData = []
+        for dd1,dd2,dd3,dd4 in zip(d1[index]['data'],d2[index]['data'],d3[index]['data'],d4[index]['data']):
+            dd1.append(dd2)
+            dd1.extend(dd3)
+            dd1.extend(dd4)
+            newData.append(dd1)
+        newDataset.append({'data': newData, 'target': d1[index]['target']})
+    return newDataset
+
 def classify(dataset):
     absolute_start_time = time.time()
     if(not os.path.isdir('./predictions')):
@@ -87,25 +99,30 @@ def classify(dataset):
     return np.array(values,dtype='object'), np.array(preds,dtype='object'), np.array(scores,dtype='object')
 
 def main():
-    values, preds, scores = classify(getTopHat())
-    with open('./predictions/svm_tophat.npz', 'wb') as out:
-        np.savez(out, values=values, preds=preds, scores=scores)
-        print(f"./predictions/svm_tophat.npz saved")
+    # values, preds, scores = classify(getTopHat())
+    # with open('./predictions/svm_tophat.npz', 'wb') as out:
+    #     np.savez(out, values=values, preds=preds, scores=scores)
+    #     print(f"./predictions/svm_tophat.npz saved")
 
-    values, preds, scores = classify(getFractalDim())
-    with open('./predictions/svm_fractaldim.npz', 'wb') as out:
-        np.savez(out, values=values, preds=preds, scores=scores)
-        print(f"./predictions/svm_fractaldim.npz saved")
+    # values, preds, scores = classify(getFractalDim())
+    # with open('./predictions/svm_fractaldim.npz', 'wb') as out:
+    #     np.savez(out, values=values, preds=preds, scores=scores)
+    #     print(f"./predictions/svm_fractaldim.npz saved")
 
-    values, preds, scores = classify(getLBP())
-    with open('./predictions/svm_LBP.npz', 'wb') as out:
-        np.savez(out, values=values, preds=preds, scores=scores)
-        print(f"./predictions/svm_LBP.npz saved")
+    # values, preds, scores = classify(getLBP())
+    # with open('./predictions/svm_LBP.npz', 'wb') as out:
+    #     np.savez(out, values=values, preds=preds, scores=scores)
+    #     print(f"./predictions/svm_LBP.npz saved")
 
-    values, preds, scores = classify(getCLBP())
-    with open('./predictions/svm_CLBP.npz', 'wb') as out:
-        np.savez(out, values=values, preds=preds, scores=scores)
-        print(f"./predictions/svm_CLBP.npz saved")
+    # values, preds, scores = classify(getCLBP())
+    # with open('./predictions/svm_CLBP.npz', 'wb') as out:
+    #     np.savez(out, values=values, preds=preds, scores=scores)
+    #     print(f"./predictions/svm_CLBP.npz saved")
 
+    dataset = join_dataset(getTopHat(), getFractalDim(), getLBP(), getCLBP())
+    values, preds, scores = classify(dataset)
+    with open('./predictions/all.npz', 'wb') as out:
+        np.savez(out, values=values, preds=preds, scores=scores)
+        print(f"./predictions/all.npz saved")
 if __name__ == "__main__":
 	main()
